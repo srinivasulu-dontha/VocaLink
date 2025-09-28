@@ -95,5 +95,4 @@ VocaLink is designed to **bridge language gaps** for Telugu and English speakers
 * **Dynamic audio generation for multiple inputs**
 
 
-Do you want me to do that next?
 
