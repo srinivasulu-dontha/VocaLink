@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VocaLink</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Roboto', sans-serif; background: linear-gradient(to right, #e0f7fa, #ffffff); margin: 0; padding: 0; }
+header { background-color: #00796b; color: #fff; padding: 30px 0; text-align: center; font-size: 28px; font-weight: 700; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+.container { max-width: 900px; margin: 30px auto; padding: 0 15px; }
+.card { background: #fff; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 6px 12px rgba(0,0,0,0.1); transition: transform 0.2s; }
+.card:hover { transform: translateY(-5px); }
+h2 { color: #00796b; margin-top: 0; }
+button { background-color: #00796b; color: #fff; border: none; padding: 12px 20px; margin-top: 15px; border-radius: 8px; cursor: pointer; font-size: 16px; transition: 0.3s; }
+button:hover { background-color: #004d40; }
+.output { margin-top: 15px; padding: 10px 15px; background: #f1f1f1; border-radius: 8px; font-weight: 500; min-height: 30px; }
+audio { margin-top: 15px; width: 100%; border-radius: 8px; }
+.status { margin-top: 10px; font-style: italic; color: #555; }
+.loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #00796b; width: 25px; height: 25px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-left: 10px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>🌐 VocaLink : Telugu ↔ English Speech Translator</header>
+<div class="container">
+
+    <!-- Section 1 -->
+    <div class="card">
+        <h2>1) Telugu Speech → English Text & Audio</h2>
+        <button id="teluguBtn" onclick="startTelugu()">🎤 Start Telugu</button>
+        <span id="loader1" style="display:none;" class="loader"></span>
+        <div class="status" id="status1">Click start and speak in Telugu...</div>
+        <div class="output">Telugu: <span id="teluguText"></span></div>
+        <div class="output">English: <span id="englishText"></span></div>
+        <audio id="englishAudio" controls></audio>
+    </div>
+
+    <!-- Section 2 -->
+    <div class="card">
+        <h2>2) English Speech → Telugu Text & Audio</h2>
+        <button id="englishBtn" onclick="startEnglish()">🎤 Start English</button>
+        <span id="loader2" style="display:none;" class="loader"></span>
+        <div class="status" id="status2">Click start and speak in English...</div>
+        <div class="output">English: <span id="englishText2"></span></div>
+        <div class="output">Telugu: <span id="teluguText2"></span></div>
+        <audio id="teluguAudio" controls></audio>
+    </div>
+
+</div>
+
+<script>
+let teluguRecognition, englishRecognition;
+
+// Section 1 - Telugu → English
+if ('webkitSpeechRecognition' in window) {
+    teluguRecognition = new webkitSpeechRecognition();
+    teluguRecognition.continuous = false;
+    teluguRecognition.interimResults = true;
+    teluguRecognition.lang = 'te-IN';
+
+    teluguRecognition.onstart = () => { 
+        document.getElementById("status1").innerText = "Listening..."; 
+    };
+    teluguRecognition.onerror = (e) => { 
+        document.getElementById("status1").innerText = "Error: " + e.error; 
+        document.getElementById("teluguBtn").disabled = false; 
+        document.getElementById("loader1").style.display = "none";
+    };
+
+    teluguRecognition.onresult = (event) => {
+        let finalText = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            finalText += event.results[i][0].transcript;
+        }
+        document.getElementById("teluguText").innerText = finalText;
+    };
+
+    teluguRecognition.onend = async () => {
+        document.getElementById("status1").innerText = "Stopped listening.";
+        const finalText = document.getElementById("teluguText").innerText;
+        if (!finalText) {
+            document.getElementById("teluguBtn").disabled = false;
+            return;
+        }
+        document.getElementById("status1").innerText = "Converting to English...";
+        document.getElementById("loader1").style.display = "inline-block";
+        const res = await fetch("/telugu_to_english", {
+            method: "POST",
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({text: finalText})
+        });
+        const data = await res.json();
+        document.getElementById("englishText").innerText = data.text;
+        const audio = document.getElementById("englishAudio");
+        audio.src = "data:audio/mp3;base64," + data.audio;
+        audio.play();
+        document.getElementById("status1").innerText = "Done!";
+        document.getElementById("loader1").style.display = "none";
+        document.getElementById("teluguBtn").disabled = false;
+    };
+}
+
+// Section 2 - English → Telugu
+if ('webkitSpeechRecognition' in window) {
+    englishRecognition = new webkitSpeechRecognition();
+    englishRecognition.continuous = false;
+    englishRecognition.interimResults = true;
+    englishRecognition.lang = 'en-US';
+
+    englishRecognition.onstart = () => { 
+        document.getElementById("status2").innerText = "Listening..."; 
+    };
+    englishRecognition.onerror = (e) => { 
+        document.getElementById("status2").innerText = "Error: " + e.error; 
+        document.getElementById("englishBtn").disabled = false;
+        document.getElementById("loader2").style.display = "none";
+    };
+
+    englishRecognition.onresult = (event) => {
+        let finalText = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            finalText += event.results[i][0].transcript;
+        }
+        document.getElementById("englishText2").innerText = finalText;
+    };
+
+    englishRecognition.onend = async () => {
+        document.getElementById("status2").innerText = "Stopped listening.";
+        const finalText = document.getElementById("englishText2").innerText;
+        if (!finalText) {
+            document.getElementById("englishBtn").disabled = false;
+            return;
+        }
+        document.getElementById("status2").innerText = "Converting to Telugu...";
+        document.getElementById("loader2").style.display = "inline-block";
+        const res = await fetch("/english_to_telugu", {
+            method: "POST",
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({text: finalText})
+        });
+        const data = await res.json();
+        document.getElementById("teluguText2").innerText = data.text;
+        const audio = document.getElementById("teluguAudio");
+        audio.src = "data:audio/mp3;base64," + data.audio;
+        audio.play();
+        document.getElementById("status2").innerText = "Done!";
+        document.getElementById("loader2").style.display = "none";
+        document.getElementById("englishBtn").disabled = false;
+    };
+}
+
+// Start buttons
+function startTelugu() { 
+    document.getElementById("teluguBtn").disabled = true;
+    teluguRecognition.start(); 
+}
+function startEnglish() { 
+    document.getElementById("englishBtn").disabled = true;
+    englishRecognition.start(); 
+}
+</script>
+
+</body>
+</html>
