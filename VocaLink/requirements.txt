@@ -1,4 +1,0 @@
-Flask==2.3.3
-gTTS==2.3.2
-googletrans==4.0.0rc1
-gunicorn==21.2.0
